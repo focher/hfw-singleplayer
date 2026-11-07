@@ -1,0 +1,15 @@
+{
+  "process": "HorizonForbiddenWest.exe",
+  "entries": [
+    {"name": "Metal Shards", "category": "currency", "type": "i32", "notes": "Main currency. Locate with a value scan, spend/earn, next-scan eq."},
+    {"name": "Health", "category": "stats", "type": "f32", "notes": "Type unverified; try f32 then i32."},
+    {"name": "Max Health", "category": "stats", "type": "f32"},
+    {"name": "Skill Points", "category": "stats", "type": "i32"},
+    {"name": "Experience", "category": "stats", "type": "i32"},
+    {"name": "Medicine Pouch", "category": "stats", "type": "f32"},
+    {"name": "Ridge-Wood", "category": "resources", "type": "i32", "notes": "Ammo crafting resource."},
+    {"name": "Metal Flower", "category": "resources", "type": "i32"},
+    {"name": "Wire", "category": "resources", "type": "i32"},
+    {"name": "Machine Core", "category": "upgrade-parts", "type": "i32", "notes": "Machine parts used for weapon/outfit upgrades."}
+  ]
+}
