@@ -1,6 +1,10 @@
 """Address table: named game values (currency, inventory, stats) and how to locate them.
 
-Each entry resolves to an address in one of three ways, tried in order:
+Each entry resolves to an address in one of these ways, tried in order:
+  0. "item":      inventory item by resource UUID (stable across runs/patches) or
+                  name; resolves to the item's amount. Uses live RTTI (decima.py).
+     "component"+"field": a named field on one of the player entity's
+                  components, e.g. Destructibility / Health. Also via RTTI.
   1. "aob":     signature in `module`; optional "rip" = [disp_offset, instr_len]
                 to follow a RIP-relative operand to a static pointer.
   2. "base":    static offset from the start of `module`.
@@ -13,8 +17,7 @@ from __future__ import annotations
 
 import json
 import threading
-import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field as dc_field
 from pathlib import Path
 
 from .process import GameProcess
@@ -29,13 +32,17 @@ class Entry:
     aob: str | None = None
     rip: list[int] | None = None
     base: str | None = None
-    offsets: list[str] = field(default_factory=list)
+    offsets: list[str] = dc_field(default_factory=list)
     address: str | None = None
+    item: str | None = None
+    component: str | None = None
+    field: str | None = None
     notes: str = ""
 
     @property
     def located(self) -> bool:
-        return bool(self.aob or self.base or self.address)
+        return bool(self.item or (self.component and self.field)
+                    or self.aob or self.base or self.address)
 
 
 @dataclass
@@ -70,7 +77,14 @@ def _int(v: str | int) -> int:
     return v if isinstance(v, int) else int(v, 0)
 
 
-def resolve(proc: GameProcess, entry: Entry, scanner=None) -> int:
+def resolve(proc: GameProcess, entry: Entry, scanner=None, decima=None) -> int:
+    """Address of an entry's value. `decima` (a decima.Decima) is needed for item/component."""
+    if entry.item or (entry.component and entry.field):
+        if decima is None:
+            raise LookupError(f"{entry.name}: needs RTTI context (use the shell or show/set commands)")
+        if entry.item:
+            return decima.find_item(entry.item).amount_address
+        return decima.component_field_address(entry.component, entry.field)[0]
     if entry.aob:
         from .scanner import Scanner
         scanner = scanner or Scanner(proc)

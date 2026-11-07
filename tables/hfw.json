@@ -1,15 +1,15 @@
 {
   "process": "HorizonForbiddenWest.exe",
   "entries": [
-    {"name": "Metal Shards", "category": "currency", "type": "i32", "notes": "Main currency. Locate with a value scan, spend/earn, next-scan eq."},
-    {"name": "Health", "category": "stats", "type": "f32", "notes": "Type unverified; try f32 then i32."},
-    {"name": "Max Health", "category": "stats", "type": "f32"},
-    {"name": "Skill Points", "category": "stats", "type": "i32"},
-    {"name": "Experience", "category": "stats", "type": "i32"},
+    {"name": "Metal Shards", "category": "currency", "type": "i32", "item": "Shard", "notes": "Shards are an inventory item (32-bit amount; overflow past 2,147,483,647 goes negative). Replace the name match with the UUID from 'inventory' / 'track'."},
+    {"name": "Health", "category": "stats", "type": "f32", "component": "Destructibility", "field": "Health", "notes": "Field name unverified: run 'dump Destructibility' and adjust."},
+    {"name": "Max Health", "category": "stats", "type": "f32", "component": "Destructibility", "field": "MaxHealth", "notes": "Field name unverified."},
+    {"name": "Skill Points", "category": "stats", "type": "i32", "notes": "Owning component unknown: 'components', then 'dump <name> skill'."},
+    {"name": "Experience", "category": "stats", "type": "i32", "notes": "Owning component unknown: 'components', then 'dump <name> xp'."},
     {"name": "Medicine Pouch", "category": "stats", "type": "f32"},
-    {"name": "Ridge-Wood", "category": "resources", "type": "i32", "notes": "Ammo crafting resource."},
-    {"name": "Metal Flower", "category": "resources", "type": "i32"},
-    {"name": "Wire", "category": "resources", "type": "i32"},
-    {"name": "Machine Core", "category": "upgrade-parts", "type": "i32", "notes": "Machine parts used for weapon/outfit upgrades."}
+    {"name": "Ridge-Wood", "category": "resources", "type": "i32", "item": "Ridge", "notes": "Name match; pin to UUID with 'track'."},
+    {"name": "Metal Flower", "category": "resources", "type": "i32", "item": "Metal Flower"},
+    {"name": "Wire", "category": "resources", "type": "i32", "item": "Wire"},
+    {"name": "Machine Core", "category": "upgrade-parts", "type": "i32", "item": "Machine Core"}
   ]
 }
