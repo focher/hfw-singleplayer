@@ -1,15 +1,22 @@
 {
   "process": "HorizonForbiddenWest.exe",
   "entries": [
-    {"name": "Metal Shards", "category": "currency", "type": "i32", "item": "Shard", "notes": "Shards are an inventory item (32-bit amount; overflow past 2,147,483,647 goes negative). Replace the name match with the UUID from 'inventory' / 'track'."},
-    {"name": "Health", "category": "stats", "type": "f32", "component": "Destructibility", "field": "Health", "notes": "Field name unverified: run 'dump Destructibility' and adjust."},
-    {"name": "Max Health", "category": "stats", "type": "f32", "component": "Destructibility", "field": "MaxHealth", "notes": "Field name unverified."},
-    {"name": "Skill Points", "category": "stats", "type": "i32", "notes": "Owning component unknown: 'components', then 'dump <name> skill'."},
-    {"name": "Experience", "category": "stats", "type": "i32", "notes": "Owning component unknown: 'components', then 'dump <name> xp'."},
-    {"name": "Medicine Pouch", "category": "stats", "type": "f32"},
-    {"name": "Ridge-Wood", "category": "resources", "type": "i32", "item": "Ridge", "notes": "Name match; pin to UUID with 'track'."},
-    {"name": "Metal Flower", "category": "resources", "type": "i32", "item": "Metal Flower"},
-    {"name": "Wire", "category": "resources", "type": "i32", "item": "Wire"},
-    {"name": "Machine Core", "category": "upgrade-parts", "type": "i32", "item": "Machine Core"}
+    {"name": "Metal Shards", "category": "currency", "type": "i32", "item": "A64685FC-90D8-7A4F-AA4B-FEBC111CF96A", "notes": "Inventory item. Signed 32-bit: keep well below 2,147,483,647. Verified live on v1.0.38.0."},
+    {"name": "Health", "category": "stats", "type": "f32", "component": "Destructibility", "field": "0x74", "notes": "Current health (float). Not in RTTI; offset verified live on v1.0.38.0 (drops on damage)."},
+    {"name": "Experience", "category": "stats", "type": "i32", "component": "CharacterProgressionComponent", "field": "0x50", "notes": "Total XP. Verified live on v1.0.38.0 (rose on a kill)."},
+    {"name": "Level", "category": "stats", "type": "i32", "component": "CharacterProgressionComponent", "field": "0x68", "notes": "Matched the menu on v1.0.38.0. Probably recomputed from XP; edit XP instead."},
+    {"name": "Skill Points", "category": "stats", "type": "i32", "component": "CharacterProgressionComponent", "field": "0x70", "notes": "Matched the Skills screen on v1.0.38.0."},
+    {"name": "Medicine Pouch", "category": "stats", "type": "f32", "component": "HealthBucketComponent", "field": "0x70", "notes": "Current pouch (max at 0x6C). Matched the HUD on v1.0.38.0; not yet watched changing."},
+    {"name": "Medicine Pouch Max", "category": "stats", "type": "f32", "component": "HealthBucketComponent", "field": "0x6C"},
+    {"name": "Ridge-Wood", "category": "resources", "type": "i32", "item": "BA128806-D3DA-6E4B-B768-A46D751850D5"},
+    {"name": "Metalbite", "category": "resources", "type": "i32", "item": "D0297C9F-8C50-4E44-B305-FE2FC6C9DDA2"},
+    {"name": "Braided Wire", "category": "resources", "type": "i32", "item": "91F6E3BE-804F-E845-830F-AAF140060771"},
+    {"name": "Sturdy Hardplate", "category": "resources", "type": "i32", "item": "8DAB3A47-D48F-9F4D-B666-82CA4161A334"},
+    {"name": "Machine Muscle", "category": "resources", "type": "i32", "item": "5F7B9747-623E-3C4B-89D8-7AB683089B5E"},
+    {"name": "Chillwater", "category": "resources", "type": "i32", "item": "9DE1EBBA-42D9-BD40-84F2-DBBA23DF08CA"},
+    {"name": "Sparker", "category": "resources", "type": "i32", "item": "371BBF8A-AAAA-BB4A-B574-B3465166BA0C"},
+    {"name": "Echo Shell", "category": "resources", "type": "i32", "item": "01968952-8AD3-6445-90C6-5182572855BD"},
+    {"name": "Small Machine Core", "category": "upgrade-parts", "type": "i32", "item": "FD09C494-E3F3-3744-9887-5C48FF0FE878"},
+    {"name": "Medicinal Berry", "category": "consumables", "type": "i32", "item": "DA3B0068-8B60-8249-8E8E-205C4DCB5316"}
   ]
 }

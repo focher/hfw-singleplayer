@@ -369,5 +369,6 @@ def main(argv=None) -> int:
         print(exc)
         return 1
     except PermissionError as exc:
-        print(f"{exc}\nTry running the terminal as Administrator.")
+        print(f"{exc}\nRun this from an Administrator terminal "
+              "(or start the game without Administrator rights).")
         return 1

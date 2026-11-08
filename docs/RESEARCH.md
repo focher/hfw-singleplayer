@@ -77,6 +77,32 @@ The mod also adds items through `Inventory::AddItem` (a game function call). An 
 change amounts of items **already in the inventory**. Getting one of a new resource first (pick one up
 or buy one) is enough.
 
+## Verified live on v1.0.38.0 (2026-11-08)
+
+All of the layouts above matched with no fallback needed. Extra findings:
+
+- **Finding the player quickly.** The module's `.data` holds a static `Array<Player*>`
+  `{u32 n=1, u32 cap=3, Player** data}` (RVA `0x896D3F0` on this build). `decima.py` finds it
+  by shape (an array record whose elements have the PlayerGame vtable), in about 3 s instead of a
+  160 s heap scan.
+- **Item names.** `InventoryItemResource.ItemName` (RTTI) points to a `LocalizedTextResource`
+  with `char* text` at +0x20 and `u16 length` at +0x28 (not in RTTI). Names are in the game's language.
+  Other useful RTTI fields: `MaxStackSize` (Array<int> per pouch level), `Category`, `Rarity`.
+- **Component state is mostly not in RTTI.** Components only expose base fields (ObjectUUID,
+  Resource, Entity). These raw offsets were checked against the game's menus and by watching them change:
+
+| Value | Component | Offset | Type | How verified |
+|---|---|---|---|---|
+| Current health | Destructibility | +0x74 | f32 | dropped 230.0 → 227.1 on damage |
+| Total XP | CharacterProgressionComponent | +0x50 | i32 | rose 4267 → 4277 on a kill |
+| Level | CharacterProgressionComponent | +0x68 | i32 | matched the menu (3) |
+| Skill points | CharacterProgressionComponent | +0x70 | i32 | matched the Skills screen (2) |
+| Medicine pouch current / max | HealthBucketComponent | +0x70 / +0x6C | f32 | matched the HUD (42 / 84) |
+
+- **Metal Shards** resource UUID `A64685FC-90D8-7A4F-AA4B-FEBC111CF96A` (an ordinary inventory item).
+- The game exe had a "Run as administrator" compatibility flag. A non-elevated tool can't open an
+  elevated process, so either both run elevated or neither does.
+
 ## Save files (persistence across runs)
 
 `%USERPROFILE%\[OneDrive\]Documents\Horizon Forbidden West Complete Edition\<SteamID64>\`

@@ -141,6 +141,30 @@ def find_pid(exe_name: str) -> int | None:
     return None
 
 
+def is_elevated(pid: int | None = None) -> bool:
+    """True if `pid` (default: this process) has an elevated (Administrator) token."""
+    k = _k32()
+    adv = ctypes.WinDLL("advapi32", use_last_error=True)
+    adv.OpenProcessToken.argtypes = [wt.HANDLE, wt.DWORD, ctypes.POINTER(wt.HANDLE)]
+    adv.GetTokenInformation.argtypes = [wt.HANDLE, ctypes.c_int, ctypes.c_void_p,
+                                        wt.DWORD, ctypes.POINTER(wt.DWORD)]
+    k.GetCurrentProcess.restype = wt.HANDLE
+    proc = k.GetCurrentProcess() if pid is None else k.OpenProcess(0x1000, False, pid)
+    if not proc:
+        return False
+    tok = wt.HANDLE()
+    try:
+        if not adv.OpenProcessToken(proc, 0x0008, ctypes.byref(tok)):  # TOKEN_QUERY
+            return False
+        val, n = wt.DWORD(), wt.DWORD()
+        ok = adv.GetTokenInformation(tok, 20, ctypes.byref(val), 4, ctypes.byref(n))  # TokenElevation
+        k.CloseHandle(tok)
+        return bool(ok and val.value)
+    finally:
+        if pid is not None:
+            k.CloseHandle(proc)
+
+
 class GameProcess:
     """An open handle to a running process with typed read/write helpers."""
 
@@ -152,7 +176,11 @@ class GameProcess:
             access |= PROCESS_VM_WRITE | PROCESS_VM_OPERATION
         handle = self._k.OpenProcess(access, False, pid)
         if not handle:
-            raise ctypes.WinError(ctypes.get_last_error())
+            err = ctypes.get_last_error()
+            if err == 5 and is_elevated(pid) and not is_elevated():
+                raise PermissionError(
+                    5, f"Access denied: PID {pid} runs as Administrator, so this tool must too")
+            raise ctypes.WinError(err)
         self.handle = handle
 
     @classmethod

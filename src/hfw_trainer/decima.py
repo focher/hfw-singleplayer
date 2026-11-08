@@ -18,6 +18,15 @@ targeting game v1.5.80.0; each offset is validated and re-searched if wrong):
     InventoryItem                +0x48 StreamingRef<EntityResource> -> proxy -> locator{+0x10 GGUUID, +0x20 obj}
                                  +0x50 u32 amount      (metal shards are an item; value is 32-bit)
     Destructibility (component)  player health and invulnerability flags
+    InventoryItemResource        RTTI field ItemName -> LocalizedTextResource
+    LocalizedTextResource        +0x20 char* text, +0x28 u16 length (not in RTTI)
+
+Finding the player fast: the game keeps a static Array<Player*> {u32 n, u32 cap,
+Player** data} in its .data section (RVA 0x896D3F0 on v1.0.38.0). We locate it by
+shape: an Array record in the module whose elements are PlayerGame objects. This
+takes a few seconds instead of a multi-GB heap scan. The heap scan is the fallback.
+
+Verified live on v1.0.38.0 (2026-11-08): every offset above matched.
 
 RTTI record layouts (RTTICompound, kind 4):
     +0x04 u8 kind  +0x06 u8 base_count  +0x07 u8 attr_count
@@ -56,7 +65,13 @@ ITEM_RESOURCE_OFF = 0x48
 ITEM_AMOUNT_OFF = 0x50
 COMPONENT_ENTITY_OFF = 0x48
 
+LOCALIZED_TEXT_OFF = 0x20
+
 GETRTTI_RE = re.compile(rb"\x48\x8D\x05(.{4})\xC3", re.DOTALL)
+# Array<T*> header with 1..8 elements, capacity < 256, then a user-mode pointer
+SMALL_PTR_ARRAY_RE = re.compile(rb"[\x01-\x08]\x00\x00\x00[\x01-\xff]\x00\x00\x00.{5}[\x00-\x7f]\x00\x00",
+                                re.DOTALL)
+RAW_OFFSET_RE = re.compile(r"^\+?0x[0-9a-fA-F]+$")
 USER_MAX = 0x7FFF_FFFF_FFFF
 
 
@@ -363,7 +378,11 @@ class Decima:
         if self._player and self.component_array(self._player[1]):
             return self._player
         candidates = []
-        for cls in ("PlayerGame", "Player"):
+        for obj in self.player_objects_from_globals():
+            entity = self._player_entity_ptr(obj)
+            if entity:
+                candidates.append((obj, entity))
+        for cls in () if candidates else ("PlayerGame", "Player"):
             for obj in self.instances(cls, limit=64, progress=progress):
                 entity = self._player_entity_ptr(obj)
                 if entity:
@@ -376,6 +395,30 @@ class Decima:
         candidates.sort(key=lambda pe: self.component(pe[1], "Inventory") is None)
         self._player = candidates[0]
         return self._player
+
+    def player_objects_from_globals(self) -> list[int]:
+        """Player objects referenced from a static Array<Player*> in the module."""
+        vts = set()
+        for cls in ("PlayerGame", "Player"):
+            vts.update(self.vtables_of(cls))
+        if not vts:
+            return []
+        out: list[int] = []
+        img, base = self.image, self._mod.base
+        for m in SMALL_PTR_ARRAY_RE.finditer(img):
+            if m.start() % 8:
+                continue
+            n, cap, data = struct.unpack_from("<IIQ", img, m.start())
+            if n > cap or not _canonical(data) or base <= data < base + len(img):
+                continue
+            try:
+                ptrs = struct.unpack(f"<{n}Q", self.proc.read(data, n * 8))
+            except OSError:
+                continue
+            for p in ptrs:
+                if _canonical(p) and self.ptr(p) in vts and p not in out:
+                    out.append(p)
+        return out
 
     def _player_entity_ptr(self, player: int) -> int | None:
         for off in [PLAYER_ENTITY_OFF] + list(range(0x20, 0x100, 8)):
@@ -430,6 +473,22 @@ class Decima:
                 f = self.field(rtti, "Name")
                 if f and f.type_name == "String":
                     name = self.read_string(res + f.offset)
+                f = self.field(rtti, "ItemName")
+                if not name and f and f.kind == KIND_POINTER:
+                    name = self.localized_text(self.ptr(res + f.offset))
+        return Item(item, item + amount_off, amount, res_uuid, res_type, name)
+
+    def localized_text(self, ltr: int) -> str | None:
+        """Text of a LocalizedTextResource in the game's current language."""
+        if not _canonical(ltr) or self.class_name(ltr) != "LocalizedTextResource":
+            return None
+        try:
+            chars, length = struct.unpack("<QH", self.proc.read(ltr + LOCALIZED_TEXT_OFF, 10))
+            if not _canonical(chars) or length > 1024:
+                return None
+            return self.proc.read(chars, length).decode("utf-8", "replace")
+        except (OSError, struct.error):
+            return None
         return Item(item, item + amount_off, amount, res_uuid, res_type, name)
 
     def player_inventory(self, progress=None) -> list[Item]:
@@ -459,6 +518,10 @@ class Decima:
         comp = self.component(entity, component_name)
         if not comp:
             raise LookupError(f"player has no {component_name} component")
+        if RAW_OFFSET_RE.match(field_name):
+            # Not in RTTI (most component state isn't): a raw offset verified live
+            off = int(field_name.lstrip("+"), 16)
+            return comp + off, Field(field_name, off, "", -1)
         f = self.field(self.rtti_of(comp), field_name)
         if not f:
             raise LookupError(f"{component_name} has no field {field_name!r}")

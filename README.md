@@ -12,7 +12,7 @@ Pure Python (stdlib `ctypes` only), no third-party runtime dependencies.
 python -m pip install -e .[dev]
 ```
 
-Run your terminal **as Administrator** if attaching fails with "Access is denied".
+If attaching fails with "Access denied", the game is running as Administrator: run the tool elevated too, or clear the "Run as administrator" compatibility setting on HorizonForbiddenWest.exe.
 
 ## Usage
 
@@ -88,8 +88,8 @@ change every launch; promote them to an `aob` + `offsets` chain for a durable ta
 
 - Unknown-initial-value scans (snapshot + changed/unchanged) and float tolerance scans
 - Pointer-scan helper to turn bound addresses into stable chains
-- Verify RTTI layouts on game build 1.0.38.0 (offsets come from v1.5.80.0)
-- Offline UUID → display-name map (via ShadelessFox/decima) for nicer item names
+- ~~Verify RTTI layouts on game build 1.0.38.0~~ done 2026-11-08; see docs/RESEARCH.md
+- Offline UUID → name map (via ShadelessFox/decima) to name items you do not hold yet
 
 ## Notes
 

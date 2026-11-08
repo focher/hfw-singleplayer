@@ -7,7 +7,7 @@ import uuid
 
 import pytest
 
-from hfw_trainer.decima import Decima, format_uuid
+from hfw_trainer.decima import KIND_POINTER, Decima, format_uuid
 from hfw_trainer.process import Module, Region
 from hfw_trainer.table import Entry, resolve
 
@@ -118,6 +118,7 @@ class Builder:
 
 SHARD_UUID = "6C7D3B2A-1F0E-4D5C-9B8A-7F6E5D4C3B2A"
 WIRE_UUID = "11111111-2222-3333-4444-555555555555"
+RIDGE_UUID = "BA128806-D3DA-6E4B-B768-A46D751850D5"
 
 
 @pytest.fixture
@@ -169,6 +170,33 @@ def game():
 
     item(0, H + 0x2000, SHARD_UUID, "Metal Shards", 1520)
     item(2, H + 0x2800, WIRE_UUID, "Wire", 12)
+
+    # Item whose name comes from InventoryItemResource.ItemName -> LocalizedTextResource
+    t_ref = MOD + b.rtti_at
+    b.rtti_at += 0x100
+    p.put(t_ref + 4, "<B", KIND_POINTER)
+    p.put(t_ref + 0x18, "<Q", b.string("Ref_LocalizedTextResource"))
+    vt_iir = b.vtable(b.compound("InventoryItemResource", [("ItemName", t_ref, 0x48, False)]))
+    vt_ltr = b.vtable(b.compound("LocalizedTextResource"))
+    at = H + 0x3000
+    proxy, loc, res, ltr, chars = at + 0x100, at + 0x200, at + 0x300, at + 0x400, at + 0x500
+    p.put(hm + 3 * 0x20, "<16sQi", uuid.uuid4().bytes, at, 0x77)
+    p.put(at, "<Q", vt_item)
+    p.put(at + 0x48, "<Q", proxy)
+    p.put(at + 0x50, "<I", 100)
+    p.put(proxy, "<Q", loc)
+    p.write(loc + 0x10, uuid.UUID(RIDGE_UUID).bytes_le)
+    p.put(loc + 0x20, "<Q", res)
+    p.put(res, "<Q", vt_iir)
+    p.put(res + 0x48, "<Q", ltr)
+    p.put(ltr, "<Q", vt_ltr)
+    p.put(ltr + 0x20, "<QH", chars, len("Ridge-Wood"))
+    p.write(chars, b"Ridge-Wood")
+    p.put(inv + 0x60, "<Qii", hm, 3, 4)
+
+    # Static Array<Player*> {u32 n, u32 cap, Player** data} in module .data
+    p.put(H + 0x80, "<Q", player)
+    p.put(MOD + 0x9000, "<IIQ", 1, 3, H + 0x80)
     return p
 
 
@@ -213,6 +241,24 @@ def test_entity_offset_fallback(game):
     game.put(HEAP + 0x100 + 0x58, "<Q", HEAP + 0x400)
     d = Decima(game, "HorizonForbiddenWest.exe")
     assert d.player_entity()[1] == HEAP + 0x400
+
+
+def test_player_found_through_static_array(game):
+    d = Decima(game, "HorizonForbiddenWest.exe")
+    assert d.player_objects_from_globals() == [HEAP + 0x100]
+
+
+def test_localized_item_name(game):
+    d = Decima(game, "HorizonForbiddenWest.exe")
+    ridge = d.find_item("ridge")
+    assert ridge.name == "Ridge-Wood" and ridge.amount == 100
+    assert ridge.resource_uuid == RIDGE_UUID
+
+
+def test_raw_component_offset(game):
+    d = Decima(game, "HorizonForbiddenWest.exe")
+    entry = Entry(name="Max Health", type="f32", component="Destructibility", field="0x84")
+    assert game.read_value(resolve(game, entry, decima=d), "f32") == 120.0
 
 
 def test_format_uuid_roundtrip():
